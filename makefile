@@ -35,10 +35,10 @@ server.o:
 client.o:
 	$(call compileAll , $(CLIENT_LIST_PATH))
 
-server :
+server : server.o
 	$(call link ,$(SERVER_LIST_PATH),$(SERVER_APP_NAME))
 
-client : 
+client : client.o
 	$(call link ,$(CLIENT_LIST_PATH),$(CLIENT_APP_NAME))
 
 clean: clean_o clean_e
@@ -48,6 +48,11 @@ clean_o :
 
 clean_e :		
 		rm -f $(BUILD)/*.exe
+
+run :
+	
+	$(BUILD)/$(SERVER_APP_NAME).exe
+	start $(BUILD)/$(CLIENT_APP_NAME)
 
 count:
 	find src include -name '*.*' | xargs wc -l

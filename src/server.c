@@ -1,9 +1,64 @@
 #include "./../include/lib.h"
 #include "./../include/const.h"
-#include "./../include/prototype.h"
+#include "./../include/proto.h"
+#include "./../include/type.h"
 
-void main(int argc, char * argv[]){
-   
+
+int clientCount = 0;
+
+Client  listClients[MAXCONN];
+HANDLE  hThreadArray[MAXCONN];
+DWORD   dwThreadIdArray[MAXCONN];
+
+
+void send_to_all_clients(int sender_index, char send_buffer[]) {
+    printf("clientCount : %d\n",clientCount);
+    for(int i = 0 ; i< clientCount; i++){
+        printf("sender_index|%d != i|%d",sender_index, i);
+        if (sender_index!= i) { // all clients except itself.
+            printf("Send to sockfd %d: \"%s\" \n", listClients[i].sockID, send_buffer);
+            Client_print(listClients[i]);
+            send(listClients[i].sockID, send_buffer, LENGTH_SEND, 0);
+        }
+    }
+}
+
+DWORD WINAPI client_handler(void * indexV){
+    //Client* client = (Client*) clientVoid;
+    int index = *(int*) indexV;
+	//printf("%s(%s)(%d) join the chatroom.\n", "----", client->addr, client->sockID);
+
+    char nickname[LENGTH_NAME] = {};
+    char recv_buffer[LENGTH_MSG] = {};
+    char send_buffer[LENGTH_SEND] = {};
+    
+    recv(listClients[index].sockID, nickname, LENGTH_NAME, 0) ;
+    
+    strcpy(listClients[index].nickName, nickname);
+    printf("\nindex : [%d]",index);
+    
+    
+    sprintf(send_buffer, ":\"%s\" joined the chatroom.\n",nickname);
+    puts(send_buffer);
+    send_to_all_clients(index, send_buffer);
+
+
+    while (1) {
+        int receive = recv(listClients[index].sockID, recv_buffer, LENGTH_MSG, 0);
+        if (receive > 0) {
+            if (strlen(recv_buffer) == 0) {
+                continue;
+            }
+            sprintf(send_buffer, "%s: %s ", listClients[index].nickName, recv_buffer);
+        } else {
+           break;
+        }
+        send_to_all_clients(index, send_buffer);
+    }
+}
+
+int main(int argc, char * argv[]){
+
     // Initialize winsock
     int wsok = WINSOCK_init();
 
@@ -13,26 +68,41 @@ void main(int argc, char * argv[]){
     // Bind the socket to an ip address and port
     int portNumber = DEFAULT_PORT;
     char ipAddress[15] = DEFAULT_HOST;
-    struct sockaddr_in serveradd;
+    struct sockaddr_in serverAdd;
     
     if(argc == 3){
         portNumber = atoi(argv[2]);
         strcpy(ipAddress, argv[1]);
     }
 
-    SOCKADD_bind(&serveradd, ipAddress, portNumber);
+    SOCKADD_bind(&serverAdd, ipAddress, portNumber);
     
 
-    bind(serverSocket, (struct sockaddr*) &serveradd , sizeof(serveradd));
+    if ( bind(serverSocket, (struct sockaddr*) &serverAdd , sizeof(serverAdd)) == -1 )  return -1;
 
     // Listening, one connection is allowed 
-    int listening = listen(serverSocket, 2); // SOMAXCONN 
+    if ( listen(serverSocket, 2) == -1 ) return -2;// MAXCONN 
 
-    if(listening != -1){
-        printf("Server listening on port %d\n", portNumber);
+    printf("Server [%s] listening on port %d .....\n",ipAddress, portNumber);
+    
+    while(1){
+        printf(".");
+        listClients[clientCount].sockID = accept(serverSocket, (struct sockaddr*) &listClients[clientCount].addr, NULL);
+        
+        
+        if( listClients[clientCount].sockID != -1 ){
+            listClients[clientCount].index = clientCount;
+            hThreadArray[clientCount] = CreateThread( NULL, 1, (void *)client_handler, &(listClients[clientCount].index), 0, &dwThreadIdArray[clientCount]);
+            clientCount ++;
+        }
+        printf("-");
     }
 
-    // Accept connection
+        getchar();
+    for(int i = 0 ; i < clientCount ; i ++)
+        CloseHandle(hThreadArray[i]);
+    
+    /*// Accept connection
     SOCKET clientSocket;
     struct sockaddr_in clientadd;
     clientSocket = accept(serverSocket, (struct sockaddr*) &clientadd, NULL);
@@ -68,6 +138,7 @@ void main(int argc, char * argv[]){
 
     // Close socket
     closesocket(serverSocket);
-
-    return;
+    */
+    
+    return 0;
 }
