@@ -1,5 +1,7 @@
 #
-codd
+codd.bat
+run.bat
+ngrok.exe
 
 # Prerequisites
 *.d

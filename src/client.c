@@ -4,7 +4,6 @@
 
 int flag=0;
 
-
 void recv_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
     char receiveMessage[LENGTH_SEND] = {};
@@ -24,9 +23,10 @@ void recv_msg_handler(void* sockIdV) {
 void send_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
     char message[LENGTH_MSG] = {};
+    puts("[press to continue!]");
     while (1) {
         fflush(stdin);
-        printf("[press to continue!]");
+        printf("You  : ");
         while ( gets(message) != NULL) {
             if (strlen(message) == 0) {
                 printf("You  : ");
@@ -44,7 +44,6 @@ void send_msg_handler(void* sockIdV) {
     }
     flag=1;
 }
-
 
 int main (int argc, char * argv[]){
      
@@ -67,8 +66,8 @@ int main (int argc, char * argv[]){
     SOCKADD_bind(&serveradd, ipAddress, portNumber);
 
     // connect to server
-     puts("Connected succesfully!");
     int connection =  connect(clientSocket, (struct sockaddr*) &serveradd, sizeof(struct sockaddr));
+     puts("Connected succesfully!");
 
     if(connection == -1){
         printf("connection error : %ld \n", WSAGetLastError());
@@ -78,10 +77,10 @@ int main (int argc, char * argv[]){
     }
 
     char nickname[LENGTH_NAME] = {};
-    printf("{%d}Please enter your name: ",clientSocket); gets(nickname);
+    printf("Enter your name: ",clientSocket); gets(nickname);
     while (strlen(nickname) < 2 || strlen(nickname) >= LENGTH_NAME-1){
         printf("\nName must be around [1-30] characters.\n");
-        printf("{%d}Please enter your name: ",clientSocket); gets(nickname);
+        printf("Enter your name: ",clientSocket); gets(nickname);
     }
 
     send( clientSocket, nickname, LENGTH_NAME, 0);
@@ -89,36 +88,15 @@ int main (int argc, char * argv[]){
     CreateThread( NULL, 0, (void *)recv_msg_handler, (void *) &clientSocket, 0, NULL);
     CreateThread( NULL, 0, (void *)send_msg_handler, (void *) &clientSocket, 0, NULL);
 
-    getchar();
-
-    /*// recieve data from  the server
-    char my_request[256] = "Hello server !";
-    char response_server[256];
-    int data_len;
-
-    while( (data_len = send(clientSocket, my_request, sizeof(my_request), 0)) > 0){
-        memset(my_request, 0,sizeof(my_request));
-        recv(clientSocket, response_server, sizeof(response_server), 0);
-        printf("server : %s\n", response_server);
-        memset(response_server, 0,sizeof(response_server));
-        fflush(stdin);
-        printf("client : "); gets(my_request);
-    }
-
-    printf("server is down : error 500 \n");
-
-    // Shutdown
-    shutdown(clientSocket, 2);
-
-    // close socket
-    closesocket(clientSocket);
-*/
     while (1) {
         if(flag) {
             printf("\nBye\n");
             break;
         }
     }
-    puts("end{client}!!");getchar();
+
+    getchar();
+    closesocket(clientSocket);
+
     return 0;
 }

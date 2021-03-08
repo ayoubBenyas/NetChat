@@ -6,6 +6,9 @@
 
 #define MAXCONN 1024
 
+#define TRUE 1
+#define FASLE 1
+
 #define LENGTH_NAME 31
 #define LENGTH_MSG 512
 #define LENGTH_SEND 512
