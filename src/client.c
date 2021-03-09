@@ -34,7 +34,7 @@ void send_msg_handler(void* sockIdV) {
                 break;
             }
         }
-        if (strcmp(message, "exit") == 0) {
+        if (strcmp(message, ":exit") == 0) {
             send(sockId, "leave chatroom", LENGTH_MSG, 0);
             break;
         }else{

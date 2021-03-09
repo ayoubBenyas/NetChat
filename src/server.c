@@ -3,7 +3,6 @@
 #include "./../include/proto.h"
 #include "./../include/type.h"
 
-
 int clientCount = 0;
 
 Client  listClients[MAXCONN];
@@ -19,7 +18,7 @@ void send_to_all_clients(int sender_index, char send_buffer[]) {
             send(listClients[i].sockID, send_buffer, LENGTH_SEND, 0);
         }
     }
-} 
+}
 
 DWORD WINAPI client_handler(void * indexV){
     //Client* client = (Client*) clientVoid;
@@ -29,7 +28,7 @@ DWORD WINAPI client_handler(void * indexV){
     char recv_buffer[LENGTH_MSG] = {};
     char send_buffer[LENGTH_SEND] = {};
     
-    recv(listClients[index].sockID, nickname, LENGTH_NAME, 0) ;
+    recv(listClients[index].sockID, nickname, LENGTH_NAME, 0);
     
     strcpy(listClients[index].nickName, nickname);
     

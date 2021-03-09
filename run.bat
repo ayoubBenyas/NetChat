@@ -1,1 +1,0 @@
-start ./build/%1.exe
