@@ -44,7 +44,7 @@ client : client.o
 clean: clean_o clean_e
 
 clean_o : 
-		rm -f $(OBJECT)/*
+		rm -f $(OBJECT)/*.o
 
 clean_e :		
 		rm -f $(BUILD)/*.exe

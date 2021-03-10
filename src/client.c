@@ -1,10 +1,11 @@
 #include "./../include/lib.h"
 #include "./../include/const.h"
 #include "./../include/proto.h"
+#include "./../include/config.h"
 
 int flag=0;
 
-void recv_msg_handler(void* sockIdV) {
+DWORD WINAPI recv_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
     char receiveMessage[LENGTH_SEND] = {};
     while (1) {
@@ -16,11 +17,11 @@ void recv_msg_handler(void* sockIdV) {
         } else {
             break;
         }
-        receive = -1;
     }
+    return 0;
 }
 
-void send_msg_handler(void* sockIdV) {
+DWORD WINAPI send_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
     char message[LENGTH_MSG] = {};
     puts("[press to continue!]");
@@ -39,10 +40,10 @@ void send_msg_handler(void* sockIdV) {
             break;
         }else{
             send(sockId, message, LENGTH_MSG, 0);
-
         }
     }
     flag=1;
+    return 0;
 }
 
 int main (int argc, char * argv[]){
@@ -55,15 +56,17 @@ int main (int argc, char * argv[]){
 
     // Bind the socket to an ip address and port 
     int portNumber = DEFAULT_PORT;
-    char ipAddress[15] = DEFAULT_HOST;
+    char *ipAddress = DEFAULT_HOST;
     struct sockaddr_in serveradd;
     
     if(argc == 3){
         portNumber = atoi(argv[2]);
         strcpy(ipAddress, argv[1]);
     }
-    printf("Try connect on [%s|%d] .....\n",ipAddress, portNumber);
-    SOCKADD_bind(&serveradd, ipAddress, portNumber);
+    printf("Try to connect to [ip: %s port: %d] .....\n",ipAddress, portNumber);
+    
+    // Set sockaddr_in structure
+    SOCKADDR_set(&serveradd, ipAddress, portNumber);
 
     // connect to server
     int connection =  connect(clientSocket, (struct sockaddr*) &serveradd, sizeof(struct sockaddr));
@@ -77,16 +80,16 @@ int main (int argc, char * argv[]){
     }
 
     char nickname[LENGTH_NAME] = {};
-    printf("Enter your name: ",clientSocket); gets(nickname);
+    printf("Enter your name: "); gets(nickname);
     while (strlen(nickname) < 2 || strlen(nickname) >= LENGTH_NAME-1){
-        printf("\nName must be around [1-30] characters.\n");
-        printf("Enter your name: ",clientSocket); gets(nickname);
+        printf("\nName must be around [2-30] characters.\n");
+        printf("Enter your name: "); gets(nickname);
     }
 
     send( clientSocket, nickname, LENGTH_NAME, 0);
 
-    CreateThread( NULL, 0, (void *)recv_msg_handler, (void *) &clientSocket, 0, NULL);
-    CreateThread( NULL, 0, (void *)send_msg_handler, (void *) &clientSocket, 0, NULL);
+    CreateThread( NULL, 0, recv_msg_handler, (void *) &clientSocket, 0, NULL);
+    CreateThread( NULL, 0, send_msg_handler, (void *) &clientSocket, 0, NULL);
 
     while (1) {
         if(flag) {
@@ -94,6 +97,9 @@ int main (int argc, char * argv[]){
             break;
         }
     }
+    
+    // Shutdown winsock
+    shutdown(clientSocket, SD_BOTH);
 
     getchar();
     closesocket(clientSocket);

@@ -1,12 +1,31 @@
 #ifndef PROTO
 #define PROTO
 
+#include "./../include/type.h"
+
+/**
+ * Create new SOCKET
+*/
 SOCKET  SOCKET_create();
 
+/**
+ * Initialize Windows SOCKET librarie
+*/
 int     WINSOCK_init();
 
-void    SOCKADD_bind(struct sockaddr_in *serveradd, char IPadd[15] , int port);
+/**
+ * set sockeraddr_in structure
+*/
+void    SOCKADDR_set(struct sockaddr_in *serveradd, char *IPadd, int port);
 
-void test(char * text);
+/**
+ * Free Client structure memorie
+*/
+void free_client(Client *clt);
+
+/**
+ * Clone a client structure
+*/
+// Client * Client_clone( Client clt1);
 
 #endif //PROTO

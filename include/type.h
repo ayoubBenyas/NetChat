@@ -6,19 +6,15 @@
 #ifndef H_CLIENT
 #define H_CLIENT
 
+// Client stucture
 typedef struct {
-    int index;
+    int index; // client identifier on the server
     char nickName[20];
-	SOCKET sockID;
+	SOCKET sockID; // client socket
 	struct sockaddr_in addr;
 	int quit;
 }Client;
 
-Client * Client_clone( Client clt1);
-void Client_print(Client clt);
-int Client_send(Client clt,  char *message);
-int Client_recv(Client clt,  char *message);
-void Client_quit(Client* clt);
 
 #endif //H_CLIENT
 
