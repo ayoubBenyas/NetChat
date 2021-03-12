@@ -41,26 +41,34 @@ void SOCKADDR_set(struct sockaddr_in *serveradd, char *IPadd, int port){
 }
 
 /**
+ * Create Mutex
+*/
+HANDLE mutexCreate(){
+    return  CreateMutexA(
+            NULL,              // security attributes
+            FALSE,             // initially not owned
+            NULL);             // unnamed mutex
+}
+
+/**
  * Free the client structure
 */
 void free_client(Client *clt){
     clt->index = -1;
-    memset(clt->nickName, 0, LENGTH_NAME);
+    ZeroMemory(clt->nickName, LENGTH_NAME);
     closesocket(clt->sockID);
-    memset(clt->addr.sin_zero, 0, sizeof(clt->addr.sin_zero));
+    ZeroMemory(clt->addr.sin_zero, sizeof(clt->addr.sin_zero));
 }
 
 /**
- * Clone Client structure
+ * Trim array 
 */
-// Client * Client_clone( Client clt){
-//     Client *ptr = (Client*) malloc(sizeof(Client));
-//     if( ptr != NULL ){
-//         ptr->index = -1;
-//         strcpy(ptr->nickName, clt.nickName);
-//         ptr->sockID = clt.sockID;
-//         //ptr->addr = ;
-//         ptr->quit = FALSE;
-//     }
-//     return ptr;
-// }
+void trim_array_from(int index, Client *array, int * arrayLength){
+    for(int i=index; i< *arrayLength -1 ; i++){
+        strcpy(array[i].nickName, array[i+1].nickName);
+        array[i].addr = array[i+1].addr;
+        array[i].sockID = array[i+1].sockID;
+        array[i].index = array[i+1].index - 1;
+    }
+    (*arrayLength)--;
+}

@@ -13,4 +13,6 @@
 #define LENGTH_MSG 512
 #define LENGTH_SEND 512
 
+#define QUIT_ROOM ":exit"
+
 #endif //H_CONST

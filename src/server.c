@@ -4,57 +4,102 @@
 #include "./../include/type.h"
 #include "./../include/config.h"
 
-int clientCount = 0;
+// Mutexs
+HANDLE hMutexRoom;
+
 // connected Clients Array
+int clientCount = 0;
 Client  listClients[MAXCONN];
+
+// For thread management
 HANDLE  hThreadArray[MAXCONN];
-DWORD   dwThreadIdArray[MAXCONN];
 
+typedef struct{
+    int sender_index;
+    char msg[LENGTH_SEND];
+}BroadParams;
 
-void broadcast(int sender_index, char send_buffer[]) {
-    for(int i = 0 ; i< clientCount; i++){
-        if (sender_index != i) { // all clients except the messenger.
-            printf("to -> %s (%d)\n",listClients[i].nickName, listClients[i].sockID);
-            send(listClients[i].sockID, send_buffer, LENGTH_SEND, 0);
+DWORD WINAPI broadcast(void * param) {
+    BroadParams broad = *(BroadParams*) param;
+    printf("message from : %d \n", broad.sender_index);
+    // debut section critique
+    WaitForSingleObject(hMutexRoom, INFINITE);
+    printf("Broad In section critique\n");
+    if(clientCount > 1){
+        for(int i = 0 ; i< clientCount; i++){
+            if (broad.sender_index != i) { // all clients except the messenger.
+                printf("from %d to -> (%d)\n",broad.sender_index ,i);
+                send(listClients[i].sockID, broad.msg, LENGTH_SEND, 0);
+            }
         }
     }
+    // fin section critique
+    ReleaseMutex(hMutexRoom);
+    ZeroMemory(broad.msg, LENGTH_SEND);
+    printf("Broad Out section critique\n");
 }
 
 DWORD WINAPI client_handler(void * indexV){
     int index = *(int*) indexV;
+    int receive;
+    char recv_buffer[LENGTH_MSG];
+    char *nickname = (char*)malloc(LENGTH_NAME);
+    BroadParams broad;
 
-    char recv_buffer[LENGTH_MSG] = {};
-    char send_buffer[LENGTH_SEND] = {};
+    // debut section critique
+    WaitForSingleObject(hMutexRoom, INFINITE);
+    printf("client in \n");
+        Client current_client = listClients[index];
+        broad.sender_index = current_client.index;
+    // fin section critique
+    ReleaseMutex(hMutexRoom);
+    printf("client out \n");
+
+    recv(current_client.sockID, nickname, LENGTH_NAME, 0);
+    strcpy(current_client.nickName, nickname);  free(nickname);
+    sprintf(broad.msg, "\"%s\" joined the chatroom.",current_client.nickName);
+    printf("message : %s \n", broad.msg);
+
+    // create thread
+    CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL); 
     
-    recv(listClients[index].sockID, listClients[index].nickName, LENGTH_NAME, 0);
-    
-    sprintf(send_buffer, "\"%s\" joined the chatroom.",listClients[index].nickName);
-    broadcast(index, send_buffer);
-    
-    while (1) {
+    do {
         // Clear buffers
-        memset(send_buffer, 0, LENGTH_SEND);
-        memset(recv_buffer, 0, LENGTH_MSG);
-
-        int recived = recv(listClients[index].sockID, recv_buffer, LENGTH_MSG, 0);
-        if ( recived > 0) {
-            if (strlen(recv_buffer) == 0) {
-                continue; // skip emty messages
-            }
-            sprintf(send_buffer, "%s : %s.", listClients[index].nickName, recv_buffer);
-        } else{
-           sprintf(send_buffer, "\"%s\" just left the chatroom.", listClients[index].nickName);
-           broadcast(index, send_buffer);
-           clientCount --;
-           //free_client(listClients+index);
-           break;
+        ZeroMemory(recv_buffer, LENGTH_MSG);
+        
+        receive = recv(current_client.sockID, recv_buffer, LENGTH_MSG, 0);
+        if ( receive > 0 ){
+            sprintf(broad.msg, "%s : %s", current_client.nickName, recv_buffer);
+            CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL);  // create thread
         }
-
-        broadcast(index, send_buffer);
-    }
+        else {
+            sprintf(broad.msg, "\"%s\" just left the chatroom.", current_client.nickName);
+            HANDLE hBroad = CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL);  // create thread
+            WaitForSingleObject(hBroad, INFINITE);
+            CloseHandle(hBroad);
+            // debut section critique
+            WaitForSingleObject(hMutexRoom, INFINITE);
+                printf("Free in\n");
+                free_client(&current_client);
+                trim_array_from(index, listClients, &clientCount);
+                printf("clientCount = %d \n", clientCount);
+            // fin section critique
+            ReleaseMutex(hMutexRoom);
+            printf("free out\n");
+            return 0;
+        }
+    }while(receive >0);
 }
 
 int main(int argc, char * argv[]){
+
+    // create Mutex
+    hMutexRoom = mutexCreate();
+
+    if(hMutexRoom == NULL){
+        printf("Error : Mutex nnot created !\n");
+        exit(1);
+    }
 
     // Initialize winsock
     int wsok = WINSOCK_init();
@@ -69,7 +114,7 @@ int main(int argc, char * argv[]){
     
     if(argc == 3){
         portNumber = atoi(argv[2]);
-        ipAddress = (char*) malloc(strlen(argv[1])*sizeof(char));
+        ipAddress = (char*) malloc((strlen(argv[1])+1)*sizeof(char));
         strcpy(ipAddress, argv[1]);
     }
 
@@ -79,31 +124,40 @@ int main(int argc, char * argv[]){
     if ( bind(serverSocket, (struct sockaddr*) &serverAdd , sizeof(serverAdd)) == -1 )  return -1;
 
     // Listening, on new connections
-    if ( listen(serverSocket, MAXCONN) == -1 ) return -2; 
+    if ( listen(serverSocket, SOMAXCONN) == -1 ) return -2;
 
     printf("Server [%s] listening on port %d .....\n",ipAddress, portNumber);
     
     while(1){
-        printf(".");
-        listClients[clientCount].sockID = accept(serverSocket, (struct sockaddr*) &listClients[clientCount].addr, NULL);
-        
+        SOCKET * newClient;
+        *newClient = accept(serverSocket, (struct sockaddr*) &listClients[clientCount].addr, NULL);
+        // debut section critique
+        WaitForSingleObject(hMutexRoom, INFINITE);
+        listClients[clientCount].sockID = *newClient;
+        printf("Got here\n");
+
         if( listClients[clientCount].sockID != -1 ){
             listClients[clientCount].index = clientCount;
-            hThreadArray[clientCount] = CreateThread( NULL, 1, client_handler, (void *) &(listClients[clientCount].index), 0, &dwThreadIdArray[clientCount]);
-            if(dwThreadIdArray[clientCount])
-                clientCount ++;
+            hThreadArray[clientCount] = CreateThread( NULL, 0, client_handler, (void *) &(listClients[clientCount].index), 0, NULL);
+            clientCount ++;
         }
-        printf("-");
+        // fin section critique
+        ReleaseMutex(hMutexRoom);
+        printf("Got out\n");
     }
 
+    // Blocks/waits till all child threads are finished.
+    // If FALSE, the function returns when the state of any one of the objects is set to signaled
+    // The INFINITE - the function will return only when the specified objects are signaled.
+    WaitForMultipleObjects(clientCount,hThreadArray,FALSE,INFINITE);
+
+    // Closing all Thread Handles
     for(int i = 0 ; i < clientCount ; i ++)
         CloseHandle(hThreadArray[i]);
     
     // Shutdown winsock
     shutdown(serverSocket, SD_BOTH);
-
-    getchar();
     closesocket(serverSocket);
-    
+
     return 0;
 }

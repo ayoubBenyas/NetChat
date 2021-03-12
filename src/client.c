@@ -3,47 +3,43 @@
 #include "./../include/proto.h"
 #include "./../include/config.h"
 
-int flag=0;
 
 DWORD WINAPI recv_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
-    char receiveMessage[LENGTH_SEND] = {};
+    char receiveMessage[LENGTH_SEND];
     while (1) {
+        ZeroMemory(receiveMessage, LENGTH_SEND);
         int receive = recv(sockId, receiveMessage, LENGTH_SEND, 0);
-        if (receive > 0) {
+        if (receive >= 0) {
             printf("\r%s\n", receiveMessage);
-            printf("You  : ");
-            memset(receiveMessage, 0,sizeof(receiveMessage));
+            printf("You : ");
         } else {
-            break;
+            // in case of error or client quit
+            return 0;
         }
     }
-    return 0;
 }
 
 DWORD WINAPI send_msg_handler(void* sockIdV) {
     SOCKET sockId = *(SOCKET*) sockIdV;
-    char message[LENGTH_MSG] = {};
-    puts("[press to continue!]");
+    char message[LENGTH_SEND];
     while (1) {
-        fflush(stdin);
-        printf("You  : ");
-        while ( gets(message) != NULL) {
-            if (strlen(message) == 0) {
-                printf("You  : ");
-            } else {
-                break;
-            }
+        ZeroMemory(message, LENGTH_SEND);
+        printf("You : ");
+        gets(message);
+        while ( strlen(message) == 0 ) {
+            printf("\rYou  : "); gets(message);
         }
-        if (strcmp(message, ":exit") == 0) {
-            send(sockId, "leave chatroom", LENGTH_MSG, 0);
-            break;
-        }else{
-            send(sockId, message, LENGTH_MSG, 0);
+
+        // client wants to exit
+        if (strcmp(message, QUIT_ROOM) == 0) {
+            printf("you are exiting the room \n");
+            closesocket(sockId);
+            return 0;
         }
+        // send the message to server
+        send(sockId, message, LENGTH_SEND, 0);
     }
-    flag=1;
-    return 0;
 }
 
 int main (int argc, char * argv[]){
@@ -88,21 +84,26 @@ int main (int argc, char * argv[]){
 
     send( clientSocket, nickname, LENGTH_NAME, 0);
 
-    CreateThread( NULL, 0, recv_msg_handler, (void *) &clientSocket, 0, NULL);
-    CreateThread( NULL, 0, send_msg_handler, (void *) &clientSocket, 0, NULL);
+    HANDLE handleArray[2];
 
-    while (1) {
-        if(flag) {
-            printf("\nBye\n");
-            break;
-        }
-    }
+    handleArray[0] = CreateThread( NULL, 0, recv_msg_handler, (void *) &clientSocket, 0, NULL);
+    handleArray[1] = CreateThread( NULL, 0, send_msg_handler, (void *) &clientSocket, 0, NULL);
+
+    printf("Iam waiting ....\n");
+    WaitForMultipleObjects(2,handleArray,TRUE,INFINITE);
+    printf("recv ends\n");
     
+    for(int i =0; i<2; i++)
+        CloseHandle(handleArray[i]);
+
+    printf("\nBye\n");
+
     // Shutdown winsock
     shutdown(clientSocket, SD_BOTH);
 
     getchar();
     closesocket(clientSocket);
 
+    ExitProcess(0);
     return 0;
 }

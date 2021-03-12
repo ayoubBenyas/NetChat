@@ -19,13 +19,18 @@ int     WINSOCK_init();
 void    SOCKADDR_set(struct sockaddr_in *serveradd, char *IPadd, int port);
 
 /**
+ * Create Mutex
+*/
+HANDLE mutexCreate();
+
+/**
  * Free Client structure memorie
 */
 void free_client(Client *clt);
 
 /**
- * Clone a client structure
+ * Trim array from stating index
 */
-// Client * Client_clone( Client clt1);
+void trim_array_from(int index, Client *clt, int *arrayLength);
 
 #endif //PROTO
