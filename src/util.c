@@ -63,12 +63,14 @@ void free_client(Client *clt){
 /**
  * Trim array 
 */
+// NOT STABLE YET GIVES ERROR IN CASE CLIENT OUT NOT FROM THE END OF THE CLIENT ARRAY
 void trim_array_from(int index, Client *array, int * arrayLength){
     for(int i=index; i< *arrayLength -1 ; i++){
-        strcpy(array[i].nickName, array[i+1].nickName);
-        array[i].addr = array[i+1].addr;
-        array[i].sockID = array[i+1].sockID;
-        array[i].index = array[i+1].index - 1;
+        strcpy((array+i)->nickName, (array+i+1)->nickName);
+        (array+i)->addr = (array+i+1)->addr;
+        (array+i)->sockID = (array+i+1)->sockID;
+        ((array+i)->index)--;
+        printf("%s : form %d to %d",(array+i)->nickName, (array+i)->index+1, (array+i)->index);
     }
     (*arrayLength)--;
 }

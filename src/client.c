@@ -33,7 +33,7 @@ DWORD WINAPI send_msg_handler(void* sockIdV) {
 
         // client wants to exit
         if (strcmp(message, QUIT_ROOM) == 0) {
-            printf("you are exiting the room \n");
+            printf("you are exiting the room !\n");
             closesocket(sockId);
             return 0;
         }
@@ -66,7 +66,7 @@ int main (int argc, char * argv[]){
 
     // connect to server
     int connection =  connect(clientSocket, (struct sockaddr*) &serveradd, sizeof(struct sockaddr));
-     puts("Connected succesfully!");
+    puts("Connected succesfully!");
 
     if(connection == -1){
         printf("connection error : %ld \n", WSAGetLastError());
@@ -89,19 +89,14 @@ int main (int argc, char * argv[]){
     handleArray[0] = CreateThread( NULL, 0, recv_msg_handler, (void *) &clientSocket, 0, NULL);
     handleArray[1] = CreateThread( NULL, 0, send_msg_handler, (void *) &clientSocket, 0, NULL);
 
-    printf("Iam waiting ....\n");
     WaitForMultipleObjects(2,handleArray,TRUE,INFINITE);
-    printf("recv ends\n");
     
     for(int i =0; i<2; i++)
         CloseHandle(handleArray[i]);
 
-    printf("\nBye\n");
-
     // Shutdown winsock
     shutdown(clientSocket, SD_BOTH);
 
-    getchar();
     closesocket(clientSocket);
 
     ExitProcess(0);
