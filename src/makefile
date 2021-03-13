@@ -1,5 +1,5 @@
 SERVER_LIST_PATH = server util
-SERVER_APP_NAME = serve
+SERVER_APP_NAME = sv
 
 CLIENT_LIST_PATH = client util
-CLIENT_APP_NAME = netChat
+CLIENT_APP_NAME = nc
