@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "const.h": "c",
+        "global.h": "c",
+        "config.h": "c",
+        "lib.h": "c"
+    }
+}

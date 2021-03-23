@@ -2,9 +2,8 @@
 #define H_TYPE
 
 #include "./../include/lib.h"
+#include "./../include/const.h"
 
-#ifndef H_CLIENT
-#define H_CLIENT
 
 // Client stucture
 typedef struct {
@@ -16,6 +15,12 @@ typedef struct {
 }Client;
 
 
-#endif //H_CLIENT
+
+typedef struct{
+    int sender_index;
+    char msg[LENGTH_SEND];
+}BroadParams;
+
+
 
 #endif //H_TYPE

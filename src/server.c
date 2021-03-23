@@ -1,11 +1,10 @@
 #include "./../include/lib.h"
 #include "./../include/const.h"
-#include "./../include/proto.h"
 #include "./../include/type.h"
+#include "./../include/global.h"
+#include "./../include/proto.h"
 #include "./../include/config.h"
 
-// Mutexs
-HANDLE hMutexRoom;
 
 // connected Clients Array
 int clientCount = 0;
@@ -14,73 +13,8 @@ Client  listClients[MAXCONN];
 // For thread management
 HANDLE  hThreadArray[MAXCONN];
 
-typedef struct{
-    int sender_index;
-    char msg[LENGTH_SEND];
-}BroadParams;
-
-DWORD WINAPI broadcast(void * param) {
-    BroadParams broad = *(BroadParams*) param;
-    // debut section critique
-    WaitForSingleObject(hMutexRoom, INFINITE);
-    if(clientCount > 1){
-        for(int i = 0 ; i< clientCount; i++){
-            if (broad.sender_index != i) { // all clients except the messenger.
-                send(listClients[i].sockID, broad.msg, LENGTH_SEND, 0);
-            }
-        }
-    }
-    // fin section critique
-    ReleaseMutex(hMutexRoom);
-    ZeroMemory(broad.msg, LENGTH_SEND);
-    return 0;
-}
-
-DWORD WINAPI client_handler(void * indexV){
-    int index = *(int*) indexV;
-    int receive;
-    char recv_buffer[LENGTH_MSG];
-    char *nickname = (char*)malloc(LENGTH_NAME);
-    BroadParams broad;
-
-    // debut section critique
-    WaitForSingleObject(hMutexRoom, INFINITE);
-        Client current_client = listClients[index];
-        broad.sender_index = current_client.index;
-    // fin section critique
-    ReleaseMutex(hMutexRoom);
-
-    recv(current_client.sockID, nickname, LENGTH_NAME, 0);
-    strcpy(current_client.nickName, nickname);  free(nickname);
-    sprintf(broad.msg, "\"%s\" joined the chatroom.",current_client.nickName);
-
-    // create thread
-    CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL); 
-    
-    do {
-        // Clear buffers
-        ZeroMemory(recv_buffer, LENGTH_MSG);
-        
-        receive = recv(current_client.sockID, recv_buffer, LENGTH_MSG, 0);
-        if ( receive > 0 ){
-            sprintf(broad.msg, "%s : %s", current_client.nickName, recv_buffer);
-            CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL);  // create thread
-        }
-        else {
-            sprintf(broad.msg, "\"%s\" just left the chatroom.", current_client.nickName);
-            HANDLE hBroad = CreateThread(NULL, 0, broadcast, (void *) &broad, 0, NULL);  // create thread
-            WaitForSingleObject(hBroad, INFINITE);
-            CloseHandle(hBroad);
-            // debut section critique
-            WaitForSingleObject(hMutexRoom, INFINITE);
-                free_client(&current_client);
-                trim_array_from(index, listClients, &clientCount);
-            // fin section critique
-            ReleaseMutex(hMutexRoom);
-            return 0;
-        }
-    }while(receive >0);
-}
+// Mutexs
+HANDLE hMutexRoom;
 
 int main(int argc, char * argv[]){
 
@@ -123,7 +57,7 @@ int main(int argc, char * argv[]){
         SOCKET * newClient;
         *newClient = accept(serverSocket, (struct sockaddr*) &listClients[clientCount].addr, NULL);
         // debut section critique
-        WaitForSingleObject(hMutexRoom, INFINITE);
+        LOCK;
         listClients[clientCount].sockID = *newClient;
 
         if( listClients[clientCount].sockID != -1 ){
@@ -132,7 +66,7 @@ int main(int argc, char * argv[]){
             clientCount ++;
         }
         // fin section critique
-        ReleaseMutex(hMutexRoom);
+        UNLOCK;
     }
 
     // waits till all child threads are finished.
