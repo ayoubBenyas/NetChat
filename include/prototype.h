@@ -9,4 +9,8 @@ void    SOCKADDR_set(struct sockaddr_in *serveradd, char * IPadd , int port);
 
 void broadcast(fd_set * master, char * msg, SOCKET sender, SOCKET server);
 
+DWORD WINAPI recv_msg_handler(void* sockIdV);
+
+DWORD WINAPI send_msg_handler(void* sockIdV);
+
 #endif

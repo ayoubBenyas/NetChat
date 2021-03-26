@@ -85,7 +85,6 @@ void main(int argc, char * argv[]){
         }
     }
     
-
     printf("Client disconnected !\n");
 
     // Shutdown winsock
